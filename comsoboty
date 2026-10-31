@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Пикто-Мир — версия для телефона</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap');
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body, html { height: 100%; overflow: hidden; font-family: 'Nunito', sans-serif; background: #1b0d40; }
+
+  /* --- КОСМИЧЕСКИЙ ФОН --- */
+  #space-bg { position: fixed; inset: 0; background: linear-gradient(135deg, #1b4d7a 0%, #0d2b45 100%); z-index: 0; }
+  .stars { position: absolute; inset: 0; background-image: radial-gradient(1px 1px at 10% 10%, #fff, transparent), radial-gradient(1.5px 1.5px at 20% 40%, #fff, transparent), radial-gradient(2px 2px at 80% 30%, #fff, transparent), radial-gradient(1px 1px at 70% 80%, #fff, transparent); background-size: 200px 200px; opacity: 0.6; animation: twinkle 4s infinite alternate; }
+  @keyframes twinkle { 0% { opacity: 0.3; } 100% { opacity: 0.8; } }
+  
+  .screen { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s ease; }
+  .hidden { opacity: 0; pointer-events: none; z-index: -1; }
+
+  /* --- ГЛАВНОЕ МЕНЮ --- */
+  .menu-grid { position: relative; display: grid; grid-template-columns: 140px 140px 140px; grid-template-rows: 140px 140px 140px; gap: 12px; z-index: 2; }
+  .btn-white { background: #ffffff; border-radius: 28px; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center; box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25); transition: 0.15s; }
+  .btn-white:hover { transform: scale(1.05); box-shadow: 0 15px 40px rgba(0, 0, 0, 0.35); }
+  .btn-white:active { transform: scale(0.95); }
+  .btn-white svg { width: 65px; height: 65px; fill: #00a8ff; }
+  .btn-play { grid-area: 1 / 2; }
+  .btn-help { grid-area: 2 / 1; }
+  .btn-planet { grid-area: 2 / 3; }
+  .btn-settings { grid-area: 3 / 2; }
+
+  .corner-btn { position: absolute; width: 80px; height: 80px; background: #ffffff; border-radius: 20px; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3); transform: rotate(45deg); transition: 0.15s; z-index: 3; }
+  .corner-btn:hover { transform: rotate(45deg) scale(1.1); }
+  .corner-btn:active { transform: rotate(45deg) scale(0.9); }
+  .corner-btn svg { width: 45px; height: 45px; transform: rotate(-45deg); }
+  .btn-rocket { top: 40px; right: 40px; }
+  .btn-rocket svg { fill: #22c55e; }
+  .btn-trash { bottom: 40px; right: 40px; }
+  .btn-trash svg { fill: #ef4444; }
+
+  /* --- ВЫБОР УРОВНЕЙ --- */
+  .level-select-container { width: 90%; max-width: 1100px; height: 80%; display: flex; flex-direction: column; }
+  .menu-title { color: #fff; font-size: 42px; font-weight: 900; letter-spacing: 2px; margin-bottom: 20px; text-shadow: 0 4px 15px rgba(0,0,0,0.5); text-align: center; }
+  .level-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; overflow-y: auto; padding: 10px; flex: 1; }
+  
+  .card { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 10px; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.2s; border: 1px solid rgba(255,255,255,0.05); position: relative; }
+  .card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.2); }
+  .card.locked { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+  .card-title { color: #fff; font-size: 18px; font-weight: 800; margin-bottom: 5px; }
+  .card-status { font-size: 14px; color: #ffb300; font-weight: 800; }
+  .card-status.done { color: #22c55e; }
+
+  .back-btn-menu { margin-top: 15px; background: rgba(255,255,255,0.2); border: none; color: #fff; padding: 10px 30px; border-radius: 12px; font-weight: 800; font-size: 16px; cursor: pointer; transition: 0.2s; align-self: center; }
+  .back-btn-menu:hover { background: rgba(255,255,255,0.3); }
+
+  /* --- ИНТЕРФЕЙС ИГРЫ --- */
+  #game-ui { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; }
+  .top-bar { display: flex; justify-content: space-between; align-items: flex-start; padding: 20px; width: 100%; height: 80px; }
+  .back-btn { width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.9); border: none; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); color: #3498db; font-size: 24px; font-weight: 900; transition: 0.2s; }
+  .back-btn:hover { transform: scale(1.1); }
+  .level-display { color: #fff; font-size: 24px; font-weight: 900; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+
+  /* Плашки */
+  .notification { position: absolute; top: -120px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%); border: 4px solid #2563eb; border-radius: 20px; padding: 12px 25px; display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 100; }
+  .notification.show { top: 20px; }
+  .notification .icon { background: #1e3a8a; width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 28px; }
+  .notification .text { color: #fff; font-size: 22px; font-weight: 900; line-height: 1.1; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+  .notification.success { background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); border-color: #16a34a; }
+  .notification.success .icon { background: #166534; }
+
+  /* Поле */
+  .game-layout { flex: 1; display: flex; justify-content: center; align-items: center; gap: 60px; padding: 0 40px; }
+  .iso-container { perspective: 1500px; width: 500px; height: 500px; display: flex; justify-content: center; align-items: center; }
+  #board-wrapper { position: relative; transform-style: preserve-3d; transition: transform 0.3s ease; }
+  #board { --cell-size: 60px; display: grid; transform: rotateX(60deg) rotateZ(-45deg); transform-style: preserve-3d; gap: calc(var(--cell-size) * .067); padding: calc(var(--cell-size) * .15); background: #fbc02d; border-radius: 12px; box-shadow: -20px 20px 0 #f57f17, 0 40px 50px rgba(0,0,0,0.6); }
+  .cell { width: var(--cell-size, 60px); height: var(--cell-size, 60px); border-radius: 6px; position: relative; transform-style: preserve-3d; background: #0288d1; border: 2px solid #03a9f4; box-shadow: inset 0 0 10px rgba(255,255,255,0.4); }
+  
+  /* Стены */
+  .wall-block { width: 50px; height: 50px; position: absolute; top: 5px; left: 5px; background: linear-gradient(135deg, #90a4ae, #546e7a); border-radius: 6px; transform: translateZ(25px) rotateX(-60deg) rotateZ(45deg); box-shadow: 0 15px 10px rgba(0,0,0,0.4), inset 0 0 10px rgba(255,255,255,0.3); border: 2px solid #cfd8dc; display: flex; justify-content: center; align-items: center; }
+  .wall-block::after { content: '⚠'; color: #cfd8dc; font-size: 24px; font-weight: bold; }
+
+  /* Кнопки */
+  .button-target {
+    width: 46px; height: 46px; position: absolute; top: 7px; left: 7px;
+    border-radius: 8px; transform: translateZ(1px);
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.5);
+  }
+  .button-target.pressed { filter: brightness(1.5); box-shadow: 0 0 20px currentColor, inset 0 0 10px #fff; }
+
+  /* 3D Ящики */
+  .crate {
+    width: 40px; height: 40px; position: absolute; top: 10px; left: 10px;
+    transform-style: preserve-3d;
+    transform: translateZ(20px) rotateX(-60deg) rotateZ(45deg);
+    transition: top 0.3s, left 0.3s;
+  }
+  .crate .face { position: absolute; width: 40px; height: 40px; border: 2px solid rgba(0,0,0,0.3); }
+  .crate .front { transform: translateZ(20px); }
+  .crate .back { transform: rotateY(180deg) translateZ(20px); }
+  .crate .left { transform: rotateY(-90deg) translateZ(20px); }
+  .crate .right { transform: rotateY(90deg) translateZ(20px); }
+  .crate .top { transform: rotateX(90deg) translateZ(20px); filter: brightness(1.2); }
+  .crate .bottom { transform: rotateX(-90deg) translateZ(20px); filter: brightness(0.7); }
+
+  /* Портал */
+  .portal { width: 40px; height: 40px; border-radius: 50%; transform: translateZ(2px); position: absolute; top: 10px; left: 10px; }
+  .portal::before { content: ''; position: absolute; inset: -4px; border-radius: 50%; background: conic-gradient(from 0deg, #10b981, #34d399, #10b981); animation: spin 2s linear infinite; filter: blur(2px); }
+  .portal::after { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: #fff; box-shadow: 0 0 15px #10b981; }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+
+  /* Робот */
+  .robot-container { position: absolute; top: 0; left: 0; width: 60px; height: 60px; transform-style: preserve-3d; transition: transform 0.3s ease-in-out; }
+  .robot-visual { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; }
+  .robot-shadow { position: absolute; bottom: -10px; left: 5px; width: 50px; height: 20px; background: rgba(0,0,0,0.5); border-radius: 50%; filter: blur(4px); transform: rotateX(90deg) translateZ(-10px); }
+  .r-base { position: absolute; bottom: 0; left: 5px; width: 50px; height: 15px; background: linear-gradient(to bottom, #b0bec5, #78909c); border-radius: 10px 10px 5px 5px; border: 2px solid #90a4ae; box-shadow: inset 0 5px 5px rgba(255,255,255,0.5); }
+  .r-base-segment { position: absolute; bottom: 5px; left: 10px; width: 40px; height: 5px; background: #546e7a; border-radius: 2px; }
+  .r-body { position: absolute; bottom: 15px; left: 10px; width: 40px; height: 35px; background: linear-gradient(to right, #f57f17, #ffca28, #f57f17); border-radius: 15px 15px 5px 5px; border: 2px solid #e65100; box-shadow: inset 0 -5px 10px rgba(0,0,0,0.2); }
+  .r-dome { position: absolute; bottom: 48px; left: 8px; width: 44px; height: 30px; background: rgba(255, 255, 255, 0.4); border-radius: 22px 22px 5px 5px; border: 2px solid rgba(255,255,255,0.8); box-shadow: inset 5px 5px 10px rgba(255,255,255,0.6); backdrop-filter: blur(2px); }
+  .r-face-panel { position: absolute; bottom: 22px; left: 12px; width: 36px; height: 18px; background: #222; border-radius: 8px; border: 2px solid #000; display: flex; justify-content: space-around; align-items: center; padding: 0 4px; box-shadow: inset 0 0 5px rgba(0,255,255,0.5); }
+  .r-eye { width: 10px; height: 10px; background: #0ff; border-radius: 50%; box-shadow: 0 0 8px #0ff; }
+  .r-back-panel { position: absolute; bottom: 22px; left: 12px; width: 36px; height: 18px; background: #444; border-radius: 8px; border: 2px solid #111; display: flex; justify-content: center; align-items: center; transform: rotateY(180deg); }
+  .r-back-light { width: 14px; height: 6px; background: #f00; border-radius: 3px; box-shadow: 0 0 10px #f00; }
+  .r-antenna { position: absolute; bottom: 75px; left: 28px; width: 4px; height: 15px; background: #ffca28; border: 1px solid #e65100; }
+  .r-antenna-tip { position: absolute; bottom: 88px; left: 25px; width: 10px; height: 10px; background: #ffca28; border-radius: 50%; border: 2px solid #e65100; box-shadow: 0 0 5px #ffca28; }
+
+  /* Панель */
+  .panel { background: rgba(255,255,255,0.95); border-radius: 20px; padding: 20px; width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); backdrop-filter: blur(10px); }
+  .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .robot-picker { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0 10px; }
+  .robot-pick { flex:1; min-width:82px; border:2px solid #cbd5e1; border-radius:10px; padding:7px 5px; background:#f8fafc; color:#1e293b; font-weight:800; cursor:pointer; font-size:12px; }
+  .robot-pick.active { border-color:#2563eb; background:#dbeafe; box-shadow:0 0 0 2px #93c5fd inset; }
+  .robot-ability { font-size:11px; line-height:1.35; color:#475569; background:#eff6ff; border-radius:8px; padding:7px 9px; margin-bottom:8px; }
+  .robot-ability strong { color:#1d4ed8; }
+  .robot-container.robot-tolkun { filter: drop-shadow(0 8px 5px rgba(0,35,75,.35)) hue-rotate(0deg); }
+  .robot-container.robot-tyagun { filter: drop-shadow(0 8px 5px rgba(0,35,75,.35)) hue-rotate(95deg) saturate(1.25); }
+  .robot-container.robot-prygun { filter: drop-shadow(0 8px 5px rgba(0,35,75,.35)) hue-rotate(210deg) saturate(1.3); }
+  .robot-type-badge { position:absolute; right:-8px; top:-12px; z-index:32; font-size:18px; background:#fff; border-radius:50%; padding:2px; box-shadow:0 2px 5px #0004; }
+  .btn-jump { background:#7c3aed !important; color:white !important; }
+
+  .panel h2 { font-size: 18px; color: #1f2a44; text-transform: uppercase; margin: 0; }
+  .cmd-counter { font-size: 14px; font-weight: 800; color: #64748b; background: #f1f5f9; padding: 4px 10px; border-radius: 8px; }
+  #program { min-height: 60px; background: #f1f6ff; border: 2px solid #b9c6e0; border-radius: 12px; padding: 10px; display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; align-content: flex-start; }
+  .cmd-slot { width: 44px; height: 44px; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: 24px; font-weight: bold; transition: 0.2s; }
+  .cmd-slot.empty { border: 2px dashed #cbd5e1; background: transparent; }
+  .cmd-slot.filled { background: #fff; border: 2px solid #9fb0ce; color: #00a8ff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+  .cmd-slot.active { background: #fbbf24; color: #000; border-color: #d97706; transform: scale(1.1); box-shadow: 0 0 15px #fbbf24; }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px; }
+  button.action { border: none; border-radius: 12px; padding: 12px; font-size: 16px; font-weight: 800; cursor: pointer; transition: 0.1s; }
+  button.action:active { transform: scale(0.95); }
+  .btn-cmd { background: #e0f2fe; color: #0369a1; font-size: 20px; }
+  .btn-run { background: #22c55e; color: #fff; font-size: 18px; box-shadow: 0 4px 10px rgba(34,197,94,0.4); grid-column: span 2; }
+  .btn-clear { background: #fee2e2; color: #b91c1c; }
+  .btn-undo { background: #fef08a; color: #854d0e; }
+  #status { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 12px; font-size: 15px; color: #334155; min-height: 60px; text-align: center; }
+
+  /* --- ОБНОВЛЁННЫЙ ИГРОВОЙ ЭКРАН: яркая космическая 3D-платформа --- */
+  #space-bg {
+    background:
+      radial-gradient(circle at 72% 25%, rgba(112,238,255,.55), transparent 28%),
+      radial-gradient(circle at 22% 78%, rgba(90,135,255,.35), transparent 32%),
+      linear-gradient(125deg, #3158a7 0%, #25b8d5 52%, #40c8db 100%);
+  }
+  #game-ui { overflow: hidden; }
+  #game-ui .top-bar {
+    height: 72px; padding: 16px 22px; align-items: center;
+  }
+  #game-ui .back-btn {
+    background: linear-gradient(145deg,#fff,#dff8ff);
+    color: #1686c4; border: 3px solid rgba(255,255,255,.75);
+    box-shadow: 0 5px 0 rgba(16,93,150,.25), 0 8px 18px rgba(0,0,0,.18);
+  }
+  #game-ui .level-display {
+    background: rgba(255,255,255,.2); border: 2px solid rgba(255,255,255,.35);
+    border-radius: 16px; padding: 9px 18px; backdrop-filter: blur(8px);
+  }
+  #game-ui .game-layout {
+    gap: clamp(16px, 3vw, 48px); padding: 0 clamp(12px, 3vw, 40px) 22px;
+    min-height: 0;
+  }
+  #game-ui .iso-container {
+    width: min(58vw, 760px); height: min(76vh, 700px);
+    flex: 1 1 0; min-width: 0; overflow: visible;
+  }
+  #board {
+    gap: 4px; padding: 10px;
+    background: linear-gradient(135deg,#ffe72e,#ffc400);
+    border: 2px solid #fff17a; border-radius: 8px;
+    box-shadow: -18px 18px 0 #df9700, 0 28px 42px rgba(0,35,75,.28);
+  }
+  .cell {
+    background:
+      repeating-linear-gradient(0deg, transparent 0 7px, rgba(0,190,255,.12) 7px 9px),
+      linear-gradient(145deg,#08caff,#0087db);
+    border: 2px solid #00b8f5; border-radius: 7px;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.12), inset 0 0 12px rgba(0,49,140,.22);
+  }
+  #game-ui .panel {
+    flex: 0 0 320px; width: min(320px, 34vw); max-height: 78vh; overflow-y: auto;
+    background: linear-gradient(160deg,rgba(255,255,255,.98),rgba(226,248,255,.96));
+    border: 3px solid rgba(255,255,255,.75); border-radius: 22px;
+    box-shadow: 0 16px 38px rgba(0,45,90,.28);
+  }
+  #game-ui .panel h2 { color: #0877a8; }
+  #game-ui #program { background: #e8f8ff; border-color: #9edff5; }
+  #game-ui .btn-cmd {
+    background: linear-gradient(180deg,#e7fbff,#b8efff);
+    color: #087fb4; border: 2px solid #8bdcf5;
+    box-shadow: 0 3px 0 #7cc9e5;
+  }
+  #game-ui .btn-run {
+    background: linear-gradient(180deg,#39df85,#16a75a);
+    box-shadow: 0 4px 0 #0b8746, 0 8px 14px rgba(34,197,94,.25);
+  }
+  #game-ui #status { background: #f0fbff; border-color: #b8e8f5; }
+  @media (max-width: 850px) {
+    #game-ui .game-layout { flex-direction: column; gap: 8px; padding: 0 12px 12px; }
+    #game-ui .iso-container { width: 94vw; height: 48vh; flex: 1 1 auto; }
+    #game-ui .panel { flex: 0 0 auto; width: min(94vw, 520px); max-height: 42vh; padding: 12px; }
+    #game-ui .top-bar { padding: 10px 14px; height: 60px; }
+    #game-ui .level-display { font-size: 18px; }
+  }
+
+
+
+  .robot-direction-badge { position:absolute; left:50%; top:-45px; transform:translateX(-50%) rotateZ(-45deg) rotateX(60deg); display:flex; flex-direction:column; align-items:center; gap:1px; z-index:30; pointer-events:none; white-space:nowrap; font-size:10px; font-weight:900; color:#102a43; text-shadow:0 1px #fff; }
+  .direction-arrow { display:flex; align-items:center; justify-content:center; width:27px; height:27px; border-radius:50%; background:#ffdf42; border:2px solid #fff; box-shadow:0 2px 8px #123b65; font-size:18px; }
+  /* Детализированный робот в духе оригинального персонажа Пикто-Мир */
+  .robot-container { width: 60px; height: 80px; overflow: visible; }
+  .robot-visual { width: 100%; height: 100%; overflow: visible; }
+  .pictomir-robot-sprite {
+    position: absolute; width: 70px; height: 98px; left: -5px; bottom: -8px;
+    object-fit: contain; filter: drop-shadow(0 3px 2px rgba(4,48,77,.25));
+    pointer-events: none;
+  }
+
+
+  /* Объёмная платформа в духе оригинального Пикто-Мир */
+  #space-bg {
+    background:
+      radial-gradient(ellipse at 53% 48%, rgba(47,211,241,.9) 0%, rgba(44,173,218,.72) 23%, transparent 49%),
+      linear-gradient(125deg,#3155a3 0%,#2b6cb3 45%,#319fc8 100%) !important;
+  }
+  .stars {
+    opacity: .72;
+    background-image:
+      radial-gradient(2px 2px at 10% 12%,#fff,transparent),
+      radial-gradient(2px 2px at 28% 34%,#a9f5ff,transparent),
+      radial-gradient(2px 2px at 73% 18%,#fff,transparent),
+      radial-gradient(2px 2px at 86% 64%,#f4a7ff,transparent),
+      radial-gradient(1.5px 1.5px at 54% 79%,#fff,transparent);
+    background-size: 240px 210px;
+  }
+  .iso-container { perspective: 1100px !important; }
+  #board {
+    gap: 4px !important;
+    padding: 9px !important;
+    border-radius: 3px !important;
+    background: linear-gradient(145deg,#ffe72a,#ffbf00 72%,#f7a900) !important;
+    border: 1px solid #fff27c !important;
+    box-shadow:
+      -1px 1px 0 #fff67a,
+      -2px 3px 0 #e8b500,
+      -4px 6px 0 #dca000,
+      -6px 9px 0 #c88700,
+      0 22px 32px rgba(0,24,65,.35) !important;
+  }
+  .cell {
+    border-radius: 5px !important;
+    border: 2px solid #00b7ed !important;
+    background:
+      repeating-linear-gradient(0deg,transparent 0 5px,rgba(0,80,200,.09) 5px 6px),
+      radial-gradient(ellipse at 35% 25%,#18d8ff 0%,#00aaf0 48%,#0079ce 100%) !important;
+    box-shadow:
+      inset 2px 2px 0 rgba(255,255,255,.48),
+      inset -3px -4px 0 rgba(0,62,155,.24),
+      inset 0 0 12px rgba(0,78,181,.28),
+      0 2px 0 #0066bd !important;
+  }
+  .cell::before {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border: 1px solid rgba(112,235,255,.45);
+    border-radius: 3px;
+    pointer-events: none;
+    background: repeating-linear-gradient(45deg,transparent 0 8px,rgba(255,255,255,.035) 8px 10px);
+  }
+  .wall-block {
+    background: linear-gradient(145deg,#d9eaf0 0%,#a8c6d2 40%,#668b9b 100%) !important;
+    border: 2px solid #f6ffff !important;
+    box-shadow:
+      inset 3px 3px 0 rgba(255,255,255,.75),
+      inset -4px -4px 0 rgba(42,80,105,.22),
+      0 5px 0 #577989,
+      0 10px 9px rgba(0,24,50,.3) !important;
+  }
+  .robot-container { filter: drop-shadow(0 8px 5px rgba(0,35,75,.35)); }
+  .pictomir-robot-sprite {
+    filter: drop-shadow(1px 2px 0 rgba(255,255,255,.4))
+            drop-shadow(0 5px 4px rgba(0,36,70,.32)) !important;
+  }
+  .r-base, .r-dome, .r-body { transform-style: preserve-3d; }
+  .r-base {
+    background: linear-gradient(180deg,#fff 0%,#e2fbff 30%,#92b8c6 72%,#f8ffff 100%) !important;
+    border: 2px solid #fff !important;
+    box-shadow: inset 0 3px 4px #fff, 0 2px 0 #688b9b !important;
+  }
+  .r-body {
+    background: linear-gradient(90deg,#e87900 0%,#ffb600 24%,#ffe45a 46%,#ffb000 74%,#df6d00 100%) !important;
+    border: 2px solid #fff0a4 !important;
+    box-shadow: inset 4px 2px 5px rgba(255,255,255,.65), inset -5px -4px 7px rgba(159,61,0,.28) !important;
+  }
+  .r-face-panel {
+    background: linear-gradient(135deg,#e8ffff,#28c9f4 50%,#087db7) !important;
+    border: 2px solid #fff !important;
+    box-shadow: inset 2px 2px 4px rgba(255,255,255,.9), 0 0 0 1px #00a7d7 !important;
+  }
+  .r-eye {
+    background: radial-gradient(circle at 30% 25%,#fff 0 15%,#a6f9ff 18%,#20c5f3 50%,#0068a5 100%) !important;
+    border: 2px solid #fff !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,.35) !important;
+  }
+  .r-antenna-tip {
+    background: radial-gradient(circle at 30% 25%,#fffda7,#ffdc24 55%,#ff8c00) !important;
+    box-shadow: inset 1px 1px 2px #fff, 0 1px 3px #a65b00 !important;
+  }
+  @media (max-width: 850px) {
+    .iso-container { perspective: 900px !important; }
+  }
+
+
+  /* Перетаскивание команд мышью и пальцем */
+  .btn-cmd, .cmd-slot { touch-action:none; }
+  .btn-cmd { cursor:grab; }
+  .cmd-slot.filled { cursor:grab; }
+  .cmd-slot.drop-target { outline:3px solid #22c55e; outline-offset:2px; }
+  .drag-ghost { position:fixed; z-index:9999; pointer-events:none; font-size:30px; padding:8px 14px; border-radius:12px; background:#fff7b2; border:2px solid #f59e0b; box-shadow:0 8px 24px #0005; transform:translate(-50%,-50%); }
+  #drag-trash { position:fixed; z-index:9998; right:18px; bottom:18px; width:68px; height:68px; border-radius:18px; display:none; align-items:center; justify-content:center; background:#fee2e2; border:3px dashed #ef4444; font-size:32px; box-shadow:0 5px 18px #0004; }
+  #drag-trash.visible { display:flex; }
+  #drag-trash.over { background:#ef4444; transform:scale(1.12); }
+
+  @media (max-width: 760px) {
+    body,html { overflow:auto; min-height:100%; }
+    #game-ui { min-height:100dvh; height:auto; }
+    .top-bar { padding:8px 10px; height:52px; align-items:center; }
+    .back-btn { width:40px; height:40px; font-size:20px; }
+    #game-ui .level-display { font-size:17px; }
+    .game-layout { flex-direction:column; gap:6px; padding:0 8px 12px; justify-content:flex-start; }
+    .iso-container { width:min(94vw, 46vh); height:min(94vw, 46vh); flex:none; }
+    .panel { width:min(96vw, 480px); padding:12px; border-radius:16px; }
+    #program { min-height:52px; gap:6px; padding:7px; margin-bottom:9px; }
+    .cmd-slot { width:40px; height:40px; font-size:22px; }
+    button.action { padding:10px 6px; min-height:44px; }
+    .btn-row { margin-bottom:8px; gap:6px; }
+    #status { padding:8px; min-height:42px; font-size:13px; }
+    .menu-grid { grid-template-columns:repeat(3,min(25vw,100px)); grid-template-rows:repeat(3,min(25vw,100px)); gap:8px; }
+    .btn-white svg { width:48px; height:48px; }
+    .corner-btn { width:54px; height:54px; right:14px; }
+    .btn-rocket { top:14px; } .btn-trash { bottom:14px; }
+    .menu-title { font-size:clamp(24px,7vw,36px); }
+    .robot-direction-badge { top:-39px; font-size:9px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="space-bg"><div class="stars"></div></div>
+
+<!-- ГЛАВНОЕ МЕНЮ -->
+<div id="main-menu" class="screen">
+  <button class="corner-btn btn-rocket" onclick="playSFX('click'); alert('Ракета готова! 🚀')"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg></button>
+  <button class="corner-btn btn-trash" onclick="playSFX('click'); alert('Корзина пуста.')"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+
+  <div class="menu-grid">
+    <button class="btn-white btn-play" onclick="playSFX('click'); showLevelSelect(); startMusic();"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+    <button class="btn-white btn-help" onclick="playSFX('click'); alert('Доведите робота до портала, а ящики поставьте на кнопки!')"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg></button>
+    <button class="btn-white btn-planet" onclick="playSFX('click'); showLevelSelect(); startMusic();"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4-9c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-8 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg></button>
+    <button class="btn-white btn-settings" onclick="playSFX('click'); alert('Настройки в разработке.')"><svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg></button>
+  </div>
+</div>
+
+<!-- ВЫБОР УРОВНЕЙ -->
+<div id="level-select-screen" class="screen hidden">
+  <div class="level-select-container">
+    <div class="menu-title">Выбор миссии</div>
+    <div class="level-grid" id="level-grid"></div>
+    <button class="back-btn-menu" onclick="playSFX('click'); showMainMenu()">← Назад в меню</button>
+  </div>
+</div>
+
+<!-- ИГРА -->
+<div id="game-ui" class="screen hidden">
+  <div class="notification" id="notification">
+    <div class="icon">🤖</div>
+    <div class="text" id="notif-text">Уровень не пройден</div>
+  </div>
+
+  <div class="top-bar">
+    <button class="back-btn" onclick="playSFX('click'); showLevelSelect()">◀</button>
+    <div class="level-display" id="level-display">Уровень 1</div>
+    <div style="width: 50px;"></div>
+  </div>
+
+  <div class="game-layout">
+    <div class="iso-container">
+      <div id="board-wrapper" style="transform: scale(1);">
+        <div id="board"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Программа</h2>
+        <div class="cmd-counter" id="cmd-counter">0 / 0</div>
+      </div>
+      <div class="robot-picker" aria-label="Выбор робота">
+        <button class="robot-pick" data-robot="tolkun" onclick="selectRobot('tolkun')">🟠 Толкун</button>
+        <button class="robot-pick" data-robot="tyagun" onclick="selectRobot('tyagun')">🟢 Тягун</button>
+        <button class="robot-pick" data-robot="prygun" onclick="selectRobot('prygun')">🔵 Прыгун</button>
+      </div>
+      <div class="robot-ability" id="robot-ability"><strong>Толкун:</strong> толкает ящики перед собой.</div>
+      <div id="program"></div>
+      <div class="btn-row">
+        <button class="action btn-cmd" title="Идти вперёд" onclick="addCommand('F')">⬆</button>
+        <button class="action btn-cmd" title="Повернуть влево" onclick="addCommand('L')">↺</button>
+        <button class="action btn-cmd" title="Повернуть вправо" onclick="addCommand('R')">↻</button>
+        <button class="action btn-cmd btn-jump" title="Прыгнуть (только Прыгун)" onclick="addCommand('J')">⤴</button>
+      </div>
+      <div class="btn-row">
+        <button class="action btn-run" onclick="runProgram()">▶ Выполнить</button>
+        <button class="action btn-undo" onclick="undoCommand()">⌫</button>
+        <button class="action btn-clear" onclick="restartCurrentLevel()">✕</button>
+      </div>
+      <div id="status">Задача уровня...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // =========================================
+  // АУДИО
+  // =========================================
+  let audioCtx;
+  let musicEnabled = true;
+  let sfxEnabled = true;
+  let musicInterval = null;
+
+  function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function playTone(freq, type, duration, vol, isMusic = false) {
+    if (!audioCtx) return;
+    if (!isMusic && !sfxEnabled) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  }
+
+  function playSFX(type) {
+    initAudio();
+    if (!sfxEnabled) return;
+    switch(type) {
+      case 'click': playTone(600, 'sine', 0.1, 0.1); break;
+      case 'step': playTone(350, 'triangle', 0.1, 0.15); break;
+      case 'turn': playTone(450, 'sine', 0.15, 0.1); break;
+      case 'push': playTone(200, 'square', 0.2, 0.1); break;
+      case 'error': playTone(150, 'sawtooth', 0.3, 0.1); setTimeout(() => playTone(120, 'sawtooth', 0.3, 0.1), 150); break;
+      case 'win': playTone(523.25, 'sine', 0.1, 0.15); setTimeout(() => playTone(659.25, 'sine', 0.1, 0.15), 100); setTimeout(() => playTone(783.99, 'sine', 0.1, 0.15), 200); setTimeout(() => playTone(1046.50, 'sine', 0.4, 0.15), 300); break;
+    }
+  }
+
+  function startMusic() {
+    initAudio();
+    if (!musicEnabled || musicInterval) return;
+    const bassNotes = [130.81, 146.83, 164.81, 146.83];
+    const melodyNotes = [523.25, 587.33, 659.25, 783.99, 659.25, 587.33];
+    let bassIndex = 0;
+    let melodyIndex = 0;
+    musicInterval = setInterval(() => {
+      if (musicEnabled && audioCtx.state === 'running') {
+        playTone(bassNotes[bassIndex % bassNotes.length], 'triangle', 2.5, 0.08, true);
+        if (bassIndex % 2 === 0) {
+           playTone(melodyNotes[melodyIndex % melodyNotes.length], 'sine', 1.5, 0.04, true);
+           melodyIndex++;
+        }
+        bassIndex++;
+      }
+    }, 1500);
+  }
+
+  // =========================================
+  // ЛОГИКА
+  // =========================================
+  const DIRS = { UP: 0, RIGHT: 1, DOWN: 2, LEFT: 3 };
+  const DIR_DELTA = [ { x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 } ];
+  const CMD_SYMBOLS = { F: '⬆', A: '⬅', D: '➡', L: '↺', R: '↻', J: '⤴' };
+
+  const mainMenuEl = document.getElementById('main-menu');
+  const levelSelectScreen = document.getElementById('level-select-screen');
+  const gameScreen = document.getElementById('game-ui');
+  
+  const boardEl = document.getElementById('board');
+  const boardWrapper = document.getElementById('board-wrapper');
+  const programEl = document.getElementById('program');
+  const statusEl = document.getElementById('status');
+  const cmdCounterEl = document.getElementById('cmd-counter');
+  const levelDisplay = document.getElementById('level-display');
+  const notification = document.getElementById('notification');
+  const notifText = document.getElementById('notif-text');
+  const levelGrid = document.getElementById('level-grid');
+
+  let levels = [];
+  let currentLevelIndex = 0;
+  let robot = { x: 0, y: 0, dir: 0 };
+  let walls = new Set();
+  let boxes = [];
+  let buttons = [];
+  let goal = { x: 0, y: 0 };
+  let program = [];
+  let running = false;
+  let timer = null;
+  let unlockedLevel = 0;
+  let failedCommandIndex = -1;
+  let currentRobotType = 'tolkun';
+  const ROBOT_INFO = {
+    tolkun: {name:'Толкун', icon:'🟠', text:'Толкает ящики перед собой. Подходит для задач с кнопками.'},
+    tyagun: {name:'Тягун', icon:'🟢', text:'Когда идёт вперёд, тянет ящик, стоящий прямо за ним, на прежнее место робота.'},
+    prygun: {name:'Прыгун', icon:'🔵', text:'Команда ⤴ перепрыгивает через одну клетку. Приземляться можно только на свободную клетку.'}
+  };
+
+  const COLORS = {
+    red: { bg: '#ef4444', front: '#b91c1c' },
+    green: { bg: '#22c55e', front: '#15803d' },
+    blue: { bg: '#3b82f6', front: '#1d4ed8' }
+  };
+
+  // BFS для поиска пути
+  function getShortestPath(start, goal, wallSet, size) {
+    const queue = [{ x: start.x, y: start.y, dist: 0 }];
+    const visited = new Set([`${start.x},${start.y}`]);
+    while (queue.length > 0) {
+      const { x, y, dist } = queue.shift();
+      if (x === goal.x && y === goal.y) return dist;
+      for (const d of DIR_DELTA) {
+        const nx = x + d.x, ny = y + d.y;
+        if (nx >= 0 && ny >= 0 && nx < size && ny < size && !wallSet.has(`${nx},${ny}`) && !visited.has(`${nx},${ny}`)) {
+          visited.add(`${nx},${ny}`);
+          queue.push({ x: nx, y: ny, dist: dist + 1 });
+        }
+      }
+    }
+    return -1;
+  }
+
+  function generateMaze(size) {
+    const grid = Array(size).fill().map(() => Array(size).fill(1));
+    const stack = [{x: 1, y: 1}];
+    grid[1][1] = 0;
+    while (stack.length > 0) {
+      const {x, y} = stack[stack.length - 1];
+      const neighbors = [];
+      if (x > 2 && grid[y][x-2] === 1) neighbors.push({x: x-2, y, dx: -1, dy: 0});
+      if (x < size-3 && grid[y][x+2] === 1) neighbors.push({x: x+2, y, dx: 1, dy: 0});
+      if (y > 2 && grid[y-2][x] === 1) neighbors.push({x, y: y-2, dx: 0, dy: -1});
+      if (y < size-3 && grid[y+2][x] === 1) neighbors.push({x, y: y+2, dx: 0, dy: 1});
+      if (neighbors.length > 0) {
+        const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+        grid[y + next.dy][x + next.dx] = 0;
+        grid[next.y][next.x] = 0;
+        stack.push({x: next.x, y: next.y});
+      } else {
+        stack.pop();
+      }
+    }
+    return grid;
+  }
+
+  function generate30Levels() {
+    levels = [];
+    
+    // Шаблоны Сокобана (Максимум 3 ящика)
+    const sokobanTemplates = [
+      {
+        // 1 ящик
+        size: 5, start: {x: 1, y: 3, dir: DIRS.UP},
+        walls: [[2,1], [1,1], [3,1], [2,4]],
+        boxes: [{x: 2, y: 2, color: 'red'}],
+        buttons: [{x: 2, y: 0, color: 'red'}],
+        goal: {x: 4, y: 0}, maxCommands: 10
+      },
+      {
+        // 2 ящика
+        size: 6, start: {x: 1, y: 4, dir: DIRS.UP},
+        walls: [[1,2], [3,2], [5,2], [3,4], [4,4]],
+        boxes: [{x: 2, y: 3, color: 'red'}, {x: 4, y: 3, color: 'blue'}],
+        buttons: [{x: 2, y: 1, color: 'red'}, {x: 4, y: 1, color: 'blue'}],
+        goal: {x: 0, y: 0}, maxCommands: 20
+      },
+      {
+        // 3 ящика
+        size: 7, start: {x: 3, y: 5, dir: DIRS.UP},
+        walls: [[2,2], [4,2], [1,3], [5,3], [3,1]],
+        boxes: [
+          {x: 3, y: 4, color: 'red'}, 
+          {x: 2, y: 3, color: 'blue'}, 
+          {x: 4, y: 3, color: 'green'}
+        ],
+        buttons: [
+          {x: 3, y: 2, color: 'red'}, 
+          {x: 0, y: 3, color: 'blue'}, 
+          {x: 6, y: 3, color: 'green'}
+        ],
+        goal: {x: 3, y: 0}, maxCommands: 30
+      }
+    ];
+
+    for (let i = 0; i < 30; i++) {
+      if (i % 2 === 0) {
+        // ЧЕТНЫЕ: ЛАБИРИНТЫ БЕЗ ЯЩИКОВ
+        let size = 7 + Math.floor(i / 6);
+        let start = { x: 1, y: size - 2, dir: DIRS.UP };
+        let goal = { x: size - 2, y: 1 };
+        let grid = generateMaze(size);
+        grid[start.y][start.x] = 0;
+        grid[goal.y][goal.x] = 0;
+        let walls = [];
+        for (let y = 0; y < size; y++) {
+          for (let x = 0; x < size; x++) {
+            if (grid[y][x] === 1) walls.push([x, y]);
+          }
+        }
+        const wallsSet = new Set(walls.map(w => `${w[0]},${w[1]}`));
+        let pathLen = getShortestPath(start, goal, wallsSet, size);
+
+        levels.push({
+          type: 'maze',
+          size: size, maxCommands: pathLen + 2,
+          start: start, goal: goal, walls: walls,
+          boxes: [], buttons: []
+        });
+      } else {
+        // НЕЧЕТНЫЕ: СОКОБАН (1, 2, 3 ЯЩИКА)
+        let templateIndex = Math.floor(i / 2) % 3; // Чередуем 1, 2 и 3 ящика
+        let base = sokobanTemplates[templateIndex];
+        levels.push({
+          type: 'sokoban',
+          size: base.size,
+          start: base.start,
+          walls: [...base.walls],
+          boxes: JSON.parse(JSON.stringify(base.boxes)),
+          buttons: JSON.parse(JSON.stringify(base.buttons)),
+          goal: base.goal,
+          maxCommands: base.maxCommands
+        });
+      }
+    }
+  }
+
+  function renderLevelGrid() {
+    levelGrid.innerHTML = '';
+    levels.forEach((lvl, index) => {
+      const card = document.createElement('div');
+      card.className = `card ${index > unlockedLevel ? 'locked' : ''}`;
+      card.onclick = () => startLevel(index);
+      const isDone = index < unlockedLevel;
+      const statusText = isDone ? 'Пройден ✅' : (index === unlockedLevel ? 'Играть ▶' : 'Закрыто 🔒');
+      
+      let typeName = lvl.type === 'maze' ? 'Лабиринт' : `Ящики (${lvl.boxes.length})`;
+      
+      card.innerHTML = `
+        <div class="card-title">Миссия ${index + 1}</div>
+        <div style="font-size:12px; color:#cbd5e1; margin-bottom:5px;">${typeName}</div>
+        <div class="card-status ${isDone ? 'done' : ''}">${statusText}</div>
+      `;
+      levelGrid.appendChild(card);
+    });
+  }
+
+  function showMainMenu() {
+    mainMenuEl.classList.remove('hidden');
+    levelSelectScreen.classList.add('hidden');
+    gameScreen.classList.add('hidden');
+    clearTimeout(timer);
+  }
+
+  function showLevelSelect() {
+    mainMenuEl.classList.add('hidden');
+    gameScreen.classList.add('hidden');
+    levelSelectScreen.classList.remove('hidden');
+    clearTimeout(timer);
+    renderLevelGrid();
+  }
+
+  function startLevel(index) {
+    if (index > unlockedLevel) return;
+    playSFX('click');
+    currentLevelIndex = index;
+    levelSelectScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+    loadLevel();
+  }
+
+  // На каждых двух уровнях доступна своя пара роботов.
+  // Пары меняются с самого начала игры, а не только на поздних уровнях.
+  function availableRobotsForLevel(index = currentLevelIndex) {
+    const pairs = [
+      ['tolkun', 'tyagun'],
+      ['tolkun', 'prygun'],
+      ['tyagun', 'prygun']
+    ];
+    return pairs[Math.floor(index / 2) % pairs.length];
+  }
+
+  function updateRobotPicker() {
+    const available = availableRobotsForLevel();
+    document.querySelectorAll('.robot-pick').forEach(btn => {
+      const shown = available.includes(btn.dataset.robot);
+      btn.hidden = !shown;
+      btn.disabled = !shown;
+      btn.classList.toggle('active', btn.dataset.robot === currentRobotType);
+    });
+    if (!available.includes(currentRobotType)) currentRobotType = available[0];
+    document.querySelectorAll('.robot-pick').forEach(btn => btn.classList.toggle('active', btn.dataset.robot === currentRobotType));
+  }
+
+  function selectRobot(type) {
+    if (running) return;
+    if (!ROBOT_INFO[type] || !availableRobotsForLevel().includes(type)) return;
+    currentRobotType = type;
+    document.querySelectorAll('.robot-pick').forEach(btn => btn.classList.toggle('active', btn.dataset.robot === type));
+    const info = ROBOT_INFO[type];
+    const ability = document.getElementById('robot-ability');
+    if (ability) ability.innerHTML = `<strong>${info.name}:</strong> ${info.text}`;
+    playSFX('click');
+    render();
+  }
+
+  function loadLevel() {
+    const lv = levels[currentLevelIndex];
+    robot = { x: lv.start.x, y: lv.start.y, dir: lv.start.dir };
+    goal = lv.goal;
+    walls = new Set(lv.walls.map(w => `${w[0]},${w[1]}`));
+    boxes = JSON.parse(JSON.stringify(lv.boxes));
+    buttons = JSON.parse(JSON.stringify(lv.buttons));
+    
+    program = []; running = false;
+    clearTimeout(timer);
+    hideNotification();
+    
+    if (lv.type === 'maze') {
+      statusEl.textContent = 'Доведите робота до портала!';
+    } else {
+      statusEl.textContent = 'Поставьте все ящики на кнопки!';
+    }
+    levelDisplay.textContent = `Миссия ${currentLevelIndex + 1}`;
+    selectRobotUI();
+    render();
+  }
+
+  function selectRobotUI() {
+    updateRobotPicker();
+    const info = ROBOT_INFO[currentRobotType];
+    const ability = document.getElementById('robot-ability');
+    if (ability && info) ability.innerHTML = `<strong>${info.name}:</strong> ${info.text}`;
+  }
+
+  function restartCurrentLevel() {
+    if (running) return;
+    playSFX('click');
+    loadLevel();
+  }
+
+  // =========================================
+  // РЕНДЕР
+  // =========================================
+  function render(activeIndex = -1) {
+    const lv = levels[currentLevelIndex];
+    boardEl.innerHTML = '';
+    const fitBox = document.querySelector('.iso-container');
+    const available = Math.max(180, Math.min(fitBox?.clientWidth || 500, fitBox?.clientHeight || 500));
+    // Оставляем запас под изометрический поворот и объёмные элементы.
+    const cellSize = Math.max(22, Math.min(60, Math.floor(available / (lv.size * 1.55))));
+    boardEl.style.setProperty('--cell-size', `${cellSize}px`);
+    boardEl.style.gridTemplateColumns = `repeat(${lv.size}, var(--cell-size))`;
+
+    for (let y = 0; y < lv.size; y++) {
+      for (let x = 0; x < lv.size; x++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+
+        if (x === goal.x && y === goal.y) {
+          const portal = document.createElement('div');
+          portal.className = 'portal';
+          cell.appendChild(portal);
+        }
+
+        if (walls.has(`${x},${y}`)) {
+          const wall = document.createElement('div');
+          wall.className = 'wall-block';
+          cell.appendChild(wall);
+        }
+
+        const btn = buttons.find(b => b.x === x && b.y === y);
+        if (btn) {
+          const btnEl = document.createElement('div');
+          btnEl.className = 'button-target';
+          btnEl.style.backgroundColor = COLORS[btn.color].bg;
+          btnEl.style.color = COLORS[btn.color].bg;
+          
+          const isPressed = boxes.some(box => box.x === x && box.y === y && box.color === btn.color);
+          if (isPressed) btnEl.classList.add('pressed');
+          
+          cell.appendChild(btnEl);
+        }
+
+        boardEl.appendChild(cell);
+      }
+    }
+
+    boxes.forEach(box => {
+      const cellIndex = box.y * lv.size + box.x;
+      const cell = boardEl.children[cellIndex];
+      if (cell) {
+        const crate = document.createElement('div');
+        crate.className = 'crate';
+        const colorData = COLORS[box.color];
+        crate.innerHTML = `
+          <div class="face front" style="background:${colorData.front}"></div>
+          <div class="face back" style="background:${colorData.front}"></div>
+          <div class="face left" style="background:${colorData.front}"></div>
+          <div class="face right" style="background:${colorData.front}"></div>
+          <div class="face top" style="background:${colorData.bg}"></div>
+          <div class="face bottom" style="background:${colorData.bg}"></div>
+        `;
+        cell.appendChild(crate);
+      }
+    });
+
+    const robotCellIndex = robot.y * lv.size + robot.x;
+    const robotCell = boardEl.children[robotCellIndex];
+    if (robotCell) {
+      const rContainer = document.createElement('div');
+      rContainer.className = `robot-container robot-${currentRobotType}`;
+      // Визуально робот всегда смотрит в одну сторону.
+      // robot.dir остаётся без изменений и продолжает управлять направлением движения.
+      rContainer.style.transform = 'translateZ(20px) rotateZ(45deg) rotateX(-60deg)';
+      
+      const rVisual = document.createElement('div');
+      rVisual.className = 'robot-visual';
+      rVisual.innerHTML = `
+        <img class="pictomir-robot-sprite" alt="Робот" src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20140%22%20width%3D%22100%22%20height%3D%22140%22%3E%0A%3Cdefs%3E%0A%3ClinearGradient%20id%3D%22shell%22%20x1%3D%220%22%20x2%3D%221%22%3E%3Cstop%20stop-color%3D%22%23d97900%22%2F%3E%3Cstop%20offset%3D%22.22%22%20stop-color%3D%22%23ffb600%22%2F%3E%3Cstop%20offset%3D%22.48%22%20stop-color%3D%22%23ffe34a%22%2F%3E%3Cstop%20offset%3D%22.72%22%20stop-color%3D%22%23ffad00%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23cf6500%22%2F%3E%3C%2FlinearGradient%3E%0A%3ClinearGradient%20id%3D%22metal%22%20x1%3D%220%22%20x2%3D%220.9%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%23fff%22%2F%3E%3Cstop%20offset%3D%22.42%22%20stop-color%3D%22%23d8f5fa%22%2F%3E%3Cstop%20offset%3D%22.75%22%20stop-color%3D%22%238aaab7%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23f8ffff%22%2F%3E%3C%2FlinearGradient%3E%0A%3ClinearGradient%20id%3D%22glass%22%20x1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%23fff%22%2F%3E%3Cstop%20offset%3D%22.35%22%20stop-color%3D%22%23c6ffff%22%2F%3E%3Cstop%20offset%3D%22.72%22%20stop-color%3D%22%2325c5ed%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%230879b9%22%2F%3E%3C%2FlinearGradient%3E%0A%3CradialGradient%20id%3D%22tip%22%3E%3Cstop%20stop-color%3D%22%23fffda4%22%2F%3E%3Cstop%20offset%3D%22.6%22%20stop-color%3D%22%23ffd21c%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23ff8800%22%2F%3E%3C%2FradialGradient%3E%0A%3Cfilter%20id%3D%22shadow%22%20x%3D%22-30%25%22%20y%3D%22-20%25%22%20width%3D%22160%25%22%20height%3D%22160%25%22%3E%3CfeGaussianBlur%20stdDeviation%3D%222%22%2F%3E%3C%2Ffilter%3E%0A%3C%2Fdefs%3E%0A%3Cellipse%20cx%3D%2251%22%20cy%3D%22130%22%20rx%3D%2235%22%20ry%3D%227%22%20fill%3D%22%23123f69%22%20opacity%3D%22.35%22%20filter%3D%22url%28%23shadow%29%22%2F%3E%0A%3Cpath%20d%3D%22M24%2054%20L24%2014%20Q24%208%2029%208%20Q34%208%2034%2014%20L34%2055%22%20fill%3D%22url%28%23metal%29%22%20stroke%3D%22%23879da5%22%20stroke-width%3D%221.5%22%2F%3E%3Ccircle%20cx%3D%2229%22%20cy%3D%2211%22%20r%3D%227%22%20fill%3D%22url%28%23tip%29%22%20stroke%3D%22%23fff0a0%22%20stroke-width%3D%221.5%22%2F%3E%0A%3Cpath%20d%3D%22M69%2050%20L69%205%20Q69%200%2074%200%20Q79%200%2079%205%20L79%2051%22%20fill%3D%22url%28%23metal%29%22%20stroke%3D%22%23879da5%22%20stroke-width%3D%221.5%22%2F%3E%3Ccircle%20cx%3D%2274%22%20cy%3D%225%22%20r%3D%227%22%20fill%3D%22url%28%23tip%29%22%20stroke%3D%22%23fff0a0%22%20stroke-width%3D%221.5%22%2F%3E%0A%3Cpath%20d%3D%22M19%2065%20Q19%2039%2049%2036%20Q80%2038%2082%2065%20L82%20105%20Q81%20116%2069%20119%20L31%20119%20Q19%20116%2019%20105Z%22%20fill%3D%22url%28%23shell%29%22%20stroke%3D%22%23fff1a6%22%20stroke-width%3D%222.5%22%2F%3E%0A%3Cpath%20d%3D%22M26%2062%20Q28%2045%2042%2043%20L39%20107%20Q29%20108%2026%2099Z%22%20fill%3D%22%23fff49a%22%20opacity%3D%22.55%22%2F%3E%0A%3Cpath%20d%3D%22M30%2056%20Q32%2035%2052%2035%20Q73%2035%2076%2056%20Q75%2072%2055%2076%20Q34%2074%2030%2056Z%22%20fill%3D%22url%28%23metal%29%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222%22%2F%3E%0A%3Cpath%20d%3D%22M35%2054%20Q38%2040%2052%2040%20Q67%2040%2071%2054%20Q69%2067%2053%2069%20Q38%2067%2035%2054Z%22%20fill%3D%22url%28%23glass%29%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222%22%2F%3E%0A%3Cellipse%20cx%3D%2248%22%20cy%3D%2253%22%20rx%3D%229%22%20ry%3D%2212%22%20fill%3D%22%23fff%22%20stroke%3D%22%23087aa4%22%20stroke-width%3D%222%22%2F%3E%3Cellipse%20cx%3D%2264%22%20cy%3D%2251%22%20rx%3D%228%22%20ry%3D%2211%22%20fill%3D%22%23fff%22%20stroke%3D%22%23087aa4%22%20stroke-width%3D%222%22%2F%3E%0A%3Cellipse%20cx%3D%2250%22%20cy%3D%2254%22%20rx%3D%224.5%22%20ry%3D%227%22%20fill%3D%22%23073b57%22%2F%3E%3Cellipse%20cx%3D%2265%22%20cy%3D%2252%22%20rx%3D%224%22%20ry%3D%226.5%22%20fill%3D%22%23073b57%22%2F%3E%3Ccircle%20cx%3D%2251%22%20cy%3D%2251%22%20r%3D%222.5%22%20fill%3D%22%23fff%22%2F%3E%3Ccircle%20cx%3D%2266%22%20cy%3D%2249%22%20r%3D%222.5%22%20fill%3D%22%23fff%22%2F%3E%0A%3Cpath%20d%3D%22M47%2078%20Q58%2085%2069%2076%20Q68%2091%2056%2091%20Q49%2089%2047%2078Z%22%20fill%3D%22%23b64a12%22%20stroke%3D%22%23fff0a0%22%20stroke-width%3D%221.5%22%2F%3E%0A%3Cpath%20d%3D%22M20%2099%20Q50%20108%2081%2099%20L81%20113%20Q51%20123%2020%20113Z%22%20fill%3D%22url%28%23metal%29%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222%22%2F%3E%0A%3Crect%20x%3D%2228%22%20y%3D%22103%22%20width%3D%2213%22%20height%3D%227%22%20rx%3D%221.5%22%20fill%3D%22%2345eaff%22%20stroke%3D%22%23fff%22%2F%3E%3Crect%20x%3D%2249%22%20y%3D%22106%22%20width%3D%2214%22%20height%3D%227%22%20rx%3D%221.5%22%20fill%3D%22%2345eaff%22%20stroke%3D%22%23fff%22%2F%3E%3Crect%20x%3D%2268%22%20y%3D%22102%22%20width%3D%227%22%20height%3D%227%22%20rx%3D%221.5%22%20fill%3D%22%2345eaff%22%20stroke%3D%22%23fff%22%2F%3E%0A%3Cellipse%20cx%3D%2251%22%20cy%3D%22119%22%20rx%3D%2231%22%20ry%3D%229%22%20fill%3D%22url%28%23metal%29%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222%22%2F%3E%3Cellipse%20cx%3D%2251%22%20cy%3D%22121%22%20rx%3D%2220%22%20ry%3D%224%22%20fill%3D%22%239cb9c2%22%2F%3E%3Cellipse%20cx%3D%2245%22%20cy%3D%22120%22%20rx%3D%228%22%20ry%3D%224%22%20fill%3D%22%23ff8b00%22%20stroke%3D%22%23ffdf53%22%20stroke-width%3D%221.5%22%2F%3E%0A%3C%2Fsvg%3E">
+      `;
+      rContainer.appendChild(rVisual);
+      const typeBadge = document.createElement('div');
+      typeBadge.className = 'robot-type-badge';
+      typeBadge.textContent = ROBOT_INFO[currentRobotType].icon;
+      typeBadge.title = ROBOT_INFO[currentRobotType].name;
+      rContainer.appendChild(typeBadge);
+      const dirBadge = document.createElement('div');
+      dirBadge.className = 'robot-direction-badge';
+      const dirInfo = [{arrow:'⬆',label:'ВВЕРХ'},{arrow:'➡',label:'ВПРАВО'},{arrow:'⬇',label:'ВНИЗ'},{arrow:'⬅',label:'ВЛЕВО'}][robot.dir] || {arrow:'⬆',label:'ВВЕРХ'};
+      dirBadge.innerHTML = `<span class="direction-arrow">${dirInfo.arrow}</span><span>${dirInfo.label}</span>`;
+      rContainer.appendChild(dirBadge);
+      robotCell.appendChild(rContainer);
+    }
+
+    renderProgram(activeIndex);
+  }
+
+  function renderProgram(activeIndex = -1) {
+    programEl.innerHTML = '';
+    const maxCmds = levels[currentLevelIndex].maxCommands;
+    cmdCounterEl.textContent = `${program.length} / ${maxCmds}`;
+    cmdCounterEl.style.color = program.length >= maxCmds ? '#ef4444' : '#64748b';
+
+    for (let i = 0; i < maxCmds; i++) {
+      const slot = document.createElement('div');
+      if (i < program.length) {
+        slot.className = `cmd-slot filled ${i === activeIndex ? 'active' : ''} ${i === failedCommandIndex && !running ? 'error-command' : ''}`;
+        slot.dataset.index = i; slot.dataset.cmd = program[i]; slot.title = 'Перетащи команду, чтобы переставить её или бросить в корзину'; slot.textContent = CMD_SYMBOLS[program[i]];
+      } else {
+        slot.className = 'cmd-slot empty'; slot.dataset.index = i; slot.title = 'Перетащи сюда стрелочку';
+      }
+      programEl.appendChild(slot);
+    }
+  }
+
+  // =========================================
+  // УПРАВЛЕНИЕ
+  // =========================================
+  function addCommand(cmd) { 
+    if (running) return;
+    failedCommandIndex = -1; 
+    if (program.length >= levels[currentLevelIndex].maxCommands) {
+      playSFX('error');
+      return;
+    }
+    playSFX('click');
+    program.push(cmd); 
+    renderProgram(); 
+  }
+
+  function undoCommand() { 
+    if (running) return; 
+    playSFX('click');
+    program.pop(); 
+    renderProgram(); 
+  }
+
+  function hideNotification() { notification.classList.remove('show', 'success'); }
+  
+  function showNotification(text, isSuccess) {
+    notifText.textContent = text;
+    if (isSuccess) notification.classList.add('success');
+    else notification.classList.remove('success');
+    notification.classList.add('show');
+  }
+
+  function runProgram() {
+    if (running) return;
+    if (program.length === 0) {
+      playSFX('error');
+      return;
+    }
+
+    // Каждый новый запуск маршрута начинается с исходного состояния уровня.
+    // Это позволяет исправить программу и запустить её заново после неудачной попытки.
+    clearTimeout(timer);
+    failedCommandIndex = -1;
+    const lv = levels[currentLevelIndex];
+    robot = { x: lv.start.x, y: lv.start.y, dir: lv.start.dir };
+    boxes = JSON.parse(JSON.stringify(lv.boxes));
+    buttons = JSON.parse(JSON.stringify(lv.buttons));
+
+    playSFX('click');
+    hideNotification();
+    render();
+    running = true;
+    statusEl.textContent = 'Выполнение...';
+    executeCommand(0);
+  }
+
+  function executeCommand(index) {
+    if (!running) return;
+    if (index >= program.length) {
+      if (isWin()) winLevel();
+      else { failedCommandIndex = Math.max(0, program.length - 1); failLevel(); }
+      return;
+    }
+    
+    const cmd = program[index];
+    const ok = applyCommand(cmd);
+    render(index);
+
+    if (!ok) { failedCommandIndex = index; failLevel(); return; }
+    if (isWin()) { winLevel(); return; }
+    
+    if (['F', 'A', 'D', 'J'].includes(cmd)) playSFX('step');
+    else playSFX('turn');
+
+    timer = setTimeout(() => executeCommand(index + 1), 400);
+  }
+
+  function failLevel() {
+    running = false;
+    render(failedCommandIndex);
+    statusEl.textContent = 'Маршрут не завершён — проверь выделенную команду.';
+    playSFX('error');
+    const step = failedCommandIndex >= 0 ? failedCommandIndex + 1 : '?';
+    showNotification(`Ошибка на команде №${step} — она выделена красным`, false);
+  }
+
+  function winLevel() {
+    running = false;
+    statusEl.textContent = 'Успех!';
+    playSFX('win');
+    showNotification('Уровень пройден!', true);
+    if (currentLevelIndex === unlockedLevel && unlockedLevel < 29) unlockedLevel++;
+    
+    timer = setTimeout(() => {
+      if (currentLevelIndex < 29) startLevel(currentLevelIndex + 1);
+      else showLevelSelect();
+    }, 2000); 
+  }
+
+  function applyCommand(cmd) {
+    const lv = levels[currentLevelIndex];
+    // Повороты меняют направление для команды «вперёд», но сам робот визуально не разворачивается.
+    if (cmd === 'L') { robot.dir = (robot.dir + 3) % 4; return true; }
+    if (cmd === 'R') { robot.dir = (robot.dir + 1) % 4; return true; }
+
+    // Прыжок доступен только роботу Прыгун: перелетает через одну клетку.
+    if (cmd === 'J') {
+      if (currentRobotType !== 'prygun') return false;
+      const jd = DIR_DELTA[robot.dir];
+      const nx = robot.x + jd.x * 2, ny = robot.y + jd.y * 2;
+      if (nx < 0 || ny < 0 || nx >= lv.size || ny >= lv.size || walls.has(`${nx},${ny}`) || boxes.some(b => b.x === nx && b.y === ny)) return false;
+      robot.x = nx; robot.y = ny;
+      return true;
+    }
+
+    // A и D — шаг влево/вправо по экрану без изменения направления робота.
+    let d;
+    if (cmd === 'A') d = { x: -1, y: 0 };
+    else if (cmd === 'D') d = { x: 1, y: 0 };
+    else if (cmd === 'F') d = DIR_DELTA[robot.dir];
+    else return true;
+
+    const nx = robot.x + d.x, ny = robot.y + d.y;
+    if (nx < 0 || ny < 0 || nx >= lv.size || ny >= lv.size || walls.has(`${nx},${ny}`)) return false;
+
+    const boxIndex = boxes.findIndex(b => b.x === nx && b.y === ny);
+    if (boxIndex !== -1) {
+      // Толкун умеет толкать ящики; остальные роботы не могут пройти сквозь них.
+      if (currentRobotType !== 'tolkun') return false;
+      const bx = nx + d.x, by = ny + d.y;
+      if (bx < 0 || by < 0 || bx >= lv.size || by >= lv.size || walls.has(`${bx},${by}`)) return false;
+      if (boxes.some(b => b.x === bx && b.y === by)) return false;
+      boxes[boxIndex].x = bx;
+      boxes[boxIndex].y = by;
+      playSFX('push');
+    }
+    // Тягун цепляет ящик позади себя и переносит его на клетку, с которой ушёл.
+    if (currentRobotType === 'tyagun' && cmd === 'F') {
+      const behindX = robot.x - d.x, behindY = robot.y - d.y;
+      const behindIndex = boxes.findIndex(b => b.x === behindX && b.y === behindY);
+      if (behindIndex !== -1) {
+        const oldX = robot.x, oldY = robot.y;
+        if (walls.has(`${oldX},${oldY}`) || boxes.some((b, i) => i !== behindIndex && b.x === oldX && b.y === oldY)) return false;
+        boxes[behindIndex].x = oldX; boxes[behindIndex].y = oldY;
+        playSFX('push');
+      }
+    }
+    robot.x = nx; robot.y = ny;
+    return true;
+  }
+
+  function isWin() {
+    const lv = levels[currentLevelIndex];
+    const robotAtGoal = robot.x === goal.x && robot.y === goal.y;
+    
+    if (lv.type === 'maze') {
+      return robotAtGoal;
+    } else {
+      // Проверяем, что ВСЕ ящики стоят на СВОИХ кнопках
+      const allButtonsPressed = buttons.every(btn => 
+        boxes.some(box => box.x === btn.x && box.y === btn.y && box.color === btn.color)
+      );
+      return allButtonsPressed && robotAtGoal;
+    }
+  }
+
+
+  // Перетаскивание стрелок пальцем или мышью: из палитры в программу,
+  // перестановка уже добавленных команд и удаление через корзину.
+  (function enableCommandDragging(){
+    let drag = null, ghost = null;
+    const trash = document.createElement('div');
+    trash.id = 'drag-trash'; trash.setAttribute('aria-label','Корзина'); trash.textContent = '🗑️';
+    document.body.appendChild(trash);
+    function symbol(cmd){ return CMD_SYMBOLS[cmd] || cmd; }
+    function clearDrag(){
+      if(ghost) ghost.remove(); ghost=null; drag=null;
+      trash.classList.remove('visible','over');
+      document.querySelectorAll('.cmd-slot.drop-target').forEach(el=>el.classList.remove('drop-target'));
+    }
+    document.addEventListener('pointerdown', e=>{
+      if(running) return;
+      const palette=e.target.closest('.btn-cmd');
+      const slot=e.target.closest('.cmd-slot.filled');
+      if(!palette && !slot) return;
+      const cmd=palette ? (palette.getAttribute('onclick')||'').match(/addCommand\('([A-Z])'\)/)?.[1] : slot.dataset.cmd;
+      if(!cmd) return;
+      drag={cmd, source:palette?'palette':'slot', index:slot?Number(slot.dataset.index):-1, startX:e.clientX, startY:e.clientY, moved:false};
+      ghost=document.createElement('div'); ghost.className='drag-ghost'; ghost.textContent=symbol(cmd); document.body.appendChild(ghost);
+      ghost.style.left=e.clientX+'px'; ghost.style.top=e.clientY+'px';
+      trash.classList.add('visible');
+      try { e.target.setPointerCapture(e.pointerId); } catch(_){}
+      e.preventDefault();
+    }, {passive:false});
+    document.addEventListener('pointermove', e=>{
+      if(!drag||!ghost) return;
+      if(Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)>5) drag.moved=true;
+      ghost.style.left=e.clientX+'px'; ghost.style.top=e.clientY+'px';
+      const el=document.elementFromPoint(e.clientX,e.clientY);
+      document.querySelectorAll('.cmd-slot.drop-target').forEach(x=>x.classList.remove('drop-target'));
+      const target=el&&el.closest('.cmd-slot'); if(target) target.classList.add('drop-target');
+      const r=trash.getBoundingClientRect(); const over=e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;
+      trash.classList.toggle('over',over);
+    }, {passive:true});
+    document.addEventListener('pointerup', e=>{
+      if(!drag) return;
+      const current=drag, el=document.elementFromPoint(e.clientX,e.clientY), target=el&&el.closest('.cmd-slot');
+      const r=trash.getBoundingClientRect(); const overTrash=trash.classList.contains('over') || (e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom);
+      if(current.moved){
+        if(overTrash && current.source==='slot') { program.splice(current.index,1); failedCommandIndex=-1; renderProgram(); playSFX('click'); }
+        else if(target){
+          const to=Math.min(Number(target.dataset.index), program.length);
+          if(current.source==='palette'){
+            if(program.length < levels[currentLevelIndex].maxCommands){ program.splice(to,0,current.cmd); failedCommandIndex=-1; renderProgram(); playSFX('click'); }
+          } else {
+            const from=current.index;
+            if(from>=0 && to!==from){ const item=program.splice(from,1)[0]; program.splice(Math.min(to,program.length),0,item); failedCommandIndex=-1; renderProgram(); playSFX('click'); }
+          }
+        }
+      }
+      clearDrag();
+    });
+    document.addEventListener('pointercancel', clearDrag);
+  })();
+
+  generate30Levels();
+  window.addEventListener('resize', () => { if (!gameScreen.classList.contains('hidden')) render(); });
+</script>
+</body>
+</html>
